@@ -88,7 +88,16 @@ class NanoporeRead(object):
         split_read_parts = [x for x in split_read_parts if len(x[0]) >= min_split_read_size]
         return split_read_parts
 
+    def get_adapter_string(self):
+        start_adapter_name_list = [a[0].name for a in self.start_adapter_alignments]
+        start_adapter_names = ','.join(start_adapter_name_list)
+        end_adapter_name_list = [a[0].name for a in self.end_adapter_alignments]
+        end_adapter_names = ','.join(end_adapter_name_list)
+        adapter_string = 'start:' + start_adapter_names + '; end:' + end_adapter_names
+        return adapter_string
+
     def get_fasta(self, min_split_read_size, discard_middle, untrimmed=False):
+        adapter_string = self.get_adapter_string()
         if not self.middle_trim_positions:
             if untrimmed:
                 seq = self.seq
@@ -96,7 +105,7 @@ class NanoporeRead(object):
                 seq = self.get_seq_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['>', self.name, '\n', add_line_breaks_to_sequence(seq, 70)])
+            return ''.join(['>', self.name, adapter_string, '\n', add_line_breaks_to_sequence(seq, 70)])
         elif discard_middle:
             return ''
         else:
@@ -106,10 +115,11 @@ class NanoporeRead(object):
                 if not split_read_part[0]:  # Don't return empty sequences
                     return ''
                 seq = add_line_breaks_to_sequence(split_read_part[0], 70)
-                fasta_str += ''.join(['>', read_name, '\n', seq])
+                fasta_str += ''.join(['>', read_name, adapter_string, '\n', seq])
             return fasta_str
 
     def get_fastq(self, min_split_read_size, discard_middle, untrimmed=False):
+        adapter_string = self.get_adapter_string()
         if not self.middle_trim_positions:
             if untrimmed:
                 seq = self.seq
@@ -119,7 +129,7 @@ class NanoporeRead(object):
                 quals = self.get_quals_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['@', self.name, '\n', seq, '\n+\n', quals, '\n'])
+            return ''.join(['@', self.name, adapter_string, '\n', seq, '\n+\n', quals, '\n'])
         elif discard_middle:
             return ''
         else:
@@ -128,7 +138,7 @@ class NanoporeRead(object):
                 read_name = add_number_to_read_name(self.name, i + 1)
                 if not split_read_part[0]:  # Don't return empty sequences
                     return ''
-                fastq_str += ''.join(['@', read_name, '\n', split_read_part[0], '\n+\n',
+                fastq_str += ''.join(['@', read_name, adapter_string, '\n', split_read_part[0], '\n+\n',
                                       split_read_part[1], '\n'])
             return fastq_str
 
